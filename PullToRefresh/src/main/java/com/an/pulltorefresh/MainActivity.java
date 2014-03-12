@@ -1,65 +1,123 @@
 package com.an.pulltorefresh;
 
-import android.support.v7.app.ActionBarActivity;
-import android.support.v7.app.ActionBar;
-import android.support.v4.app.Fragment;
+import java.util.ArrayList;
+import java.util.List;
+
+import uk.co.senab.actionbarpulltorefresh.library.ActionBarPullToRefresh;
+import uk.co.senab.actionbarpulltorefresh.library.PullToRefreshLayout;
+import uk.co.senab.actionbarpulltorefresh.library.listeners.OnRefreshListener;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.annotation.SuppressLint;
+import android.app.Fragment;
+import android.app.ListFragment;
 import android.view.View;
 import android.view.ViewGroup;
-import android.os.Build;
+import android.widget.ArrayAdapter;
 
-public class MainActivity extends ActionBarActivity {
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new PlaceholderFragment())
-                    .commit();
-        }
-    }
-
+public class MainActivity extends BaseActivity {
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
+    protected Fragment getSampleFragment() {
+        return new SimpleListFragment();
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
+    @SuppressLint("NewApi")
+    public static class SimpleListFragment extends ListFragment implements OnRefreshListener
+    {
 
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    public static class PlaceholderFragment extends Fragment {
+        int i=0;
 
-        public PlaceholderFragment() {
+        private     PullToRefreshLayout mPullToRefreshLayout;
+
+        ArrayAdapter<String> adapter;
+
+        List<String> list;
+
+        @Override
+        public void onViewCreated(View view, Bundle savedInstanceState) {
+            // TODO Auto-generated method stub
+            super.onViewCreated(view, savedInstanceState);
+
+            list=new ArrayList<String>();
+            int no=1;
+            for(int i=0;i<5;i++)
+            {
+                list.add("Item No :"+no++);
+            }
+
+            super.onViewCreated(view,savedInstanceState);
+            ViewGroup viewGroup = (ViewGroup) view;
+
+            // As we're using a ListFragment we create a PullToRefreshLayout manually
+            mPullToRefreshLayout = new PullToRefreshLayout(viewGroup.getContext());
+
+            // We can now setup the PullToRefreshLayout
+            ActionBarPullToRefresh.from(getActivity())
+                    // We need to insert the PullToRefreshLayout into the Fragment's ViewGroup
+                    .insertLayoutInto(viewGroup)
+                            // Here we mark just the ListView and it's Empty View as pullable
+                    .theseChildrenArePullable(android.R.id.list, android.R.id.empty)
+                    .listener(this)
+                    .setup(mPullToRefreshLayout);
+
         }
 
         @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            return rootView;
+        public void onActivityCreated(Bundle savedInstanceState) {
+            // TODO Auto-generated method stub
+            super.onActivityCreated(savedInstanceState);
+
+            adapter=new ArrayAdapter<String>(getActivity(),android.R.layout.simple_list_item_1, list);
+
+            // Set the List Adapter to display the sample items
+            setListAdapter(adapter);
+            setListShownNoAnimation(true);
         }
+
+        @Override
+        public void onRefreshStarted(View view) {
+            // TODO Auto-generated method stub
+
+            //setListShown(false); // This will hide the listview and visible a round progress bar
+
+            new AsyncTask<Void, Void, Void>() {
+
+                @Override
+                protected Void doInBackground(Void... params) {
+                    try {
+                        Thread.sleep(5000); // 5 seconds
+                        int itemNo=list.size();
+                        itemNo++;
+                        list.add("New Item No :"+itemNo);
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }
+
+                @Override
+                protected void onPostExecute(Void result) {
+                    super.onPostExecute(result);
+
+                    adapter.notifyDataSetChanged();
+                    // Notify PullToRefreshLayout that the refresh has finished
+                    mPullToRefreshLayout.setRefreshComplete();
+
+                    // if you set the "setListShown(false)" then you have to
+                    //uncomment the below code segment
+
+//                        if (getView() != null) {
+//                            // Show the list again
+//                            setListShown(true);
+//                        }
+                }
+            }.execute();
+
+        }
+
     }
 
 }

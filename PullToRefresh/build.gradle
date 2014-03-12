@@ -20,4 +20,6 @@ android {
 
 dependencies {
     compile 'com.android.support:appcompat-v7:+'
+    compile 'com.github.chrisbanes.actionbarpulltorefresh:extra-abc:+'
+
 }
